@@ -275,35 +275,6 @@ export default function SignatureApp() {
     }
   }, [showExportMenu])
 
-  // Keyboard shortcuts
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      const isMod = e.metaKey || e.ctrlKey
-
-      // Don't trigger shortcuts when typing in input
-      if (document.activeElement === inputRef.current && !isMod) return
-
-      if (isMod && e.key === "s") {
-        e.preventDefault()
-        downloadJPG()
-      } else if (isMod && e.key === "c" && document.activeElement !== inputRef.current) {
-        e.preventDefault()
-        copyToClipboard()
-      } else if (e.key === "t" && document.activeElement !== inputRef.current) {
-        e.preventDefault()
-        cycleTheme()
-      } else if (e.key === "Escape") {
-        if (name) {
-          clearSignature()
-        }
-        setShowExportMenu(false)
-      }
-    }
-
-    document.addEventListener("keydown", handleKeyDown)
-    return () => document.removeEventListener("keydown", handleKeyDown)
-  }, [downloadJPG, copyToClipboard, cycleTheme, clearSignature, name])
-
   const frameOptions: { style: FrameStyle; icon: React.ReactNode; label: string }[] = [
     { style: "none", icon: <NoFrameIcon />, label: "No Frame" },
     { style: "thin", icon: <Square className="w-3.5 h-3.5" strokeWidth={1.5} />, label: "Thin Border" },

@@ -5,13 +5,14 @@ Transform your name into a unique constellation signature.
 ## Features
 
 - Type your name to generate a unique constellation pattern
-- Multiple color themes (Mono, Amber, Blue)
+- 7 color themes (Mono, Amber, Blue, Emerald, Violet, Rose, Cyan)
 - Frame styles (None, Thin, Double, Corner Brackets)
-- Export as JPG or SVG
+- Export as JPG or SVG (SVG exports tight bounding box when no frame)
 - Copy to clipboard
-- Keyboard sound effects with multiple sound packs
+- Keyboard sound effects with multiple sound packs (Mechanical, Membrane, Typewriter)
 - Click canvas to add a date stamp
-- Smooth animations powered by Framer Motion
+- Interactive onboarding experience
+- Fully responsive on mobile
 
 ## Tech Stack
 
@@ -25,19 +26,10 @@ Transform your name into a unique constellation signature.
 ## Getting Started
 
 ```bash
-# Install dependencies
 pnpm install
-
-# Run development server
 pnpm dev
-
-# Build for production
-pnpm build
-
-# Start production server
-pnpm start
 ```
 
-## License
+## Author
 
-MIT
+[laks.sh](https://laks.sh)

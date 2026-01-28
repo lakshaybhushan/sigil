@@ -11,6 +11,18 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "SIGIL",
   description: "Transform your name into a unique constellation signature",
+  metadataBase: new URL("https://sigil.vercel.app"),
+  openGraph: {
+    title: "SIGIL",
+    description: "Transform your name into a unique constellation signature",
+    type: "website",
+    siteName: "SIGIL",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "SIGIL",
+    description: "Transform your name into a unique constellation signature",
+  },
 }
 
 export default function RootLayout({
