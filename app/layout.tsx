@@ -11,7 +11,7 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "SIGIL",
   description: "Transform your name into a unique constellation signature",
-  metadataBase: new URL("https://sigil.vercel.app"),
+  metadataBase: new URL("https://sigil.laks.sh/"),
   openGraph: {
     title: "SIGIL",
     description: "Transform your name into a unique constellation signature",
