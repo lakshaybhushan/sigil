@@ -179,7 +179,7 @@ function useToast() {
         listeners.splice(index, 1)
       }
     }
-  }, [state])
+  }, []) // Subscribe once on mount - setState is stable
 
   return {
     ...state,

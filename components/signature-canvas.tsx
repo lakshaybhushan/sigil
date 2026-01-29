@@ -755,19 +755,15 @@ export const SignatureCanvas = forwardRef<SignatureCanvasRef, SignatureCanvasPro
     const mousePos = useRef<{ x: number; y: number } | null>(null)
     const [stamp, setStamp] = useState<{ date: string; name: string } | null>(null)
     
-    // Theme transition state
+    // Theme transition state - detect change during render (not in useEffect)
     const prevThemeRef = useRef<Theme>(theme)
     const themeTransitionStartRef = useRef<number>(0)
-    const [transitionProgress, setTransitionProgress] = useState(1)
-    
-    // Detect theme change and start transition
-    useEffect(() => {
-      if (prevThemeRef.current !== theme) {
-        themeTransitionStartRef.current = performance.now()
-        setTransitionProgress(0)
-        prevThemeRef.current = theme
-      }
-    }, [theme])
+
+    // Detect theme change during render instead of useEffect
+    if (prevThemeRef.current !== theme) {
+      themeTransitionStartRef.current = performance.now()
+      prevThemeRef.current = theme
+    }
 
     // Get interpolated colors based on transition
     const getInterpolatedColors = useCallback((progress: number) => {
