@@ -112,14 +112,14 @@ const THEME_COLORS: Record<Theme, string> = {
 
 // Custom corner icon component
 const CornersIcon = () => (
-  <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5">
+  <svg aria-hidden="true" width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5">
     <path d="M1 4V1h3M10 1h3v3M13 10v3h-3M4 13H1v-3" />
   </svg>
 )
 
 // No frame icon
 const NoFrameIcon = () => (
-  <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5" strokeDasharray="2 2">
+  <svg aria-hidden="true" width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5" strokeDasharray="2 2">
     <rect x="1" y="1" width="12" height="12" />
   </svg>
 )
@@ -314,16 +314,16 @@ export default function SignatureApp() {
                 },
               }}
             >
-              <div className="flex items-center gap-2 text-neutral-600">
+              <div className="flex items-center gap-2 text-neutral-400">
                 <span className="text-xs font-light uppercase tracking-[0.3em]">SIGIL</span>
-                <span className="text-neutral-800">/</span>
-                <span className="text-[10px] font-light uppercase tracking-wider text-neutral-700">001</span>
+                <span className="text-neutral-500">/</span>
+                <span className="text-[10px] font-light uppercase tracking-wider text-neutral-500">001</span>
               </div>
             </motion.div>
 
             {/* Signature Canvas */}
             <motion.div
-              className="border border-neutral-900 cursor-crosshair"
+              className="border border-neutral-800 cursor-crosshair"
               onClick={handleCanvasClick}
               variants={{
                 hidden: { opacity: 0, scale: 0.98, filter: "blur(10px)" },
@@ -349,8 +349,8 @@ export default function SignatureApp() {
                 ) : (
                   <div className="absolute inset-0 flex items-center justify-center">
                     <motion.span
-                      className="text-xs uppercase tracking-[0.4em] text-neutral-700"
-                      animate={{ opacity: [0.3, 0.6, 0.3] }}
+                      className="text-xs uppercase tracking-[0.4em] text-neutral-500"
+                      animate={{ opacity: [0.5, 0.8, 0.5] }}
                       transition={{ duration: 2.5, repeat: Infinity, ease: "easeInOut" }}
                     >
                       Start typing
@@ -375,14 +375,15 @@ export default function SignatureApp() {
               <Input
                 ref={inputRef}
                 type="text"
-                placeholder="START TYPING"
+                aria-label="Enter your name"
+                placeholder="START TYPING…"
                 value={name}
                 onChange={handleInputChange}
                 onKeyDown={handleKeyDown}
                 onKeyUp={handleKeyUp}
                 onBlur={() => setTimeout(() => inputRef.current?.focus(), 0)}
                 autoFocus
-                className="w-full h-10 text-xs font-light uppercase tracking-[0.15em] px-3 bg-black border-neutral-900 text-neutral-300 placeholder:text-neutral-800 focus:border-neutral-700 focus:ring-0 rounded-none"
+                className="w-full h-10 text-xs font-light uppercase tracking-[0.15em] px-3 bg-black border-neutral-800 text-neutral-300 placeholder:text-neutral-500 focus:border-neutral-600 focus-visible:ring-1 focus-visible:ring-neutral-600 rounded-none"
                 maxLength={255}
               />
             </motion.div>
@@ -407,7 +408,7 @@ export default function SignatureApp() {
 
         {/* Bottom Dock - Fixed at bottom */}
         <motion.div
-          className="sticky bottom-0 w-full bg-black border-t border-neutral-900 py-2 sm:py-3 px-2 sm:px-4"
+          className="sticky bottom-0 w-full bg-black border-t border-neutral-800 py-2 sm:py-3 px-2 sm:px-4"
           initial={{ opacity: 0, y: 30, filter: "blur(10px)" }}
           animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
           transition={{ type: "spring", stiffness: 80, damping: 20, delay: 0.5 }}
@@ -419,7 +420,8 @@ export default function SignatureApp() {
                 <TooltipTrigger asChild>
                   <button
                     onClick={() => setSoundEnabled(!soundEnabled)}
-                    className="h-8 w-8 sm:h-9 sm:w-9 flex items-center justify-center bg-neutral-950 border border-neutral-900 hover:bg-neutral-900 transition-colors text-neutral-600 hover:text-neutral-400"
+                    aria-label={soundEnabled ? "Mute sound" : "Unmute sound"}
+                    className="h-8 w-8 sm:h-9 sm:w-9 flex items-center justify-center bg-neutral-950 border border-neutral-800 hover:bg-neutral-900 transition-[background-color,color] text-neutral-400 hover:text-neutral-300 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-neutral-500"
                   >
                     {soundEnabled ? (
                       <Volume2 className="w-4 h-4" strokeWidth={1.5} />
@@ -439,7 +441,8 @@ export default function SignatureApp() {
                   <button
                     onClick={cycleSoundPack}
                     disabled={!soundEnabled}
-                    className={`h-8 sm:h-9 px-2 sm:px-3 flex items-center justify-center bg-neutral-950 border border-neutral-900 hover:bg-neutral-900 transition-colors text-[9px] sm:text-[10px] uppercase tracking-wider font-light ${soundEnabled ? "text-neutral-600 hover:text-neutral-400" : "text-neutral-800 cursor-not-allowed"}`}
+                    aria-label="Change sound pack"
+                    className={`h-8 sm:h-9 px-2 sm:px-3 flex items-center justify-center bg-neutral-950 border border-neutral-800 hover:bg-neutral-900 transition-[background-color,color] text-[9px] sm:text-[10px] uppercase tracking-wider font-light focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-neutral-500 ${soundEnabled ? "text-neutral-400 hover:text-neutral-300" : "text-neutral-600 cursor-not-allowed"}`}
                   >
                     {SOUND_PACKS[soundPack].label}
                   </button>
@@ -457,10 +460,12 @@ export default function SignatureApp() {
                   <TooltipTrigger asChild>
                     <button
                       onClick={() => setFrameStyle(option.style)}
-                      className={`h-8 w-8 sm:h-9 sm:w-9 flex items-center justify-center bg-neutral-950 border border-neutral-900 transition-colors ${
+                      aria-label={option.label}
+                      aria-pressed={frameStyle === option.style}
+                      className={`h-8 w-8 sm:h-9 sm:w-9 flex items-center justify-center bg-neutral-950 border border-neutral-800 transition-[background-color,color] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-neutral-500 ${
                         frameStyle === option.style
-                          ? "text-neutral-300 bg-neutral-800"
-                          : "text-neutral-600 hover:bg-neutral-900 hover:text-neutral-400"
+                          ? "text-neutral-200 bg-neutral-800"
+                          : "text-neutral-400 hover:bg-neutral-900 hover:text-neutral-300"
                       }`}
                     >
                       {option.icon}
@@ -479,9 +484,10 @@ export default function SignatureApp() {
                 <TooltipTrigger asChild>
                   <button
                     onClick={cycleTheme}
-                    className="h-8 w-8 sm:h-9 sm:w-9 flex items-center justify-center bg-neutral-950 border border-neutral-900 hover:bg-neutral-900 transition-colors"
+                    aria-label={`Change theme, current: ${theme}`}
+                    className="h-8 w-8 sm:h-9 sm:w-9 flex items-center justify-center bg-neutral-950 border border-neutral-800 hover:bg-neutral-900 transition-[background-color] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-neutral-500"
                   >
-                    <div className={`w-3 h-3 ${THEME_COLORS[theme]} transition-colors`} />
+                    <div aria-hidden="true" className={`w-3 h-3 ${THEME_COLORS[theme]} transition-[background-color]`} />
                   </button>
                 </TooltipTrigger>
                 <TooltipContent side="top" sideOffset={8} className="bg-neutral-900 border-neutral-800 text-neutral-400 text-[10px] rounded-none px-2 py-1">
@@ -498,7 +504,10 @@ export default function SignatureApp() {
                     <button
                       onClick={() => setShowExportMenu(!showExportMenu)}
                       disabled={!name.trim()}
-                      className="h-8 w-8 sm:h-9 sm:w-9 flex items-center justify-center bg-neutral-950 border border-neutral-900 hover:bg-neutral-900 transition-colors text-neutral-600 hover:text-neutral-400 disabled:opacity-30 disabled:hover:bg-neutral-950 disabled:cursor-not-allowed"
+                      aria-label="Export signature"
+                      aria-expanded={showExportMenu}
+                      aria-haspopup="menu"
+                      className="h-8 w-8 sm:h-9 sm:w-9 flex items-center justify-center bg-neutral-950 border border-neutral-800 hover:bg-neutral-900 transition-[background-color,color] text-neutral-400 hover:text-neutral-300 disabled:opacity-40 disabled:hover:bg-neutral-950 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-neutral-500"
                     >
                       <Download className="w-4 h-4" strokeWidth={1.5} />
                     </button>
@@ -509,19 +518,21 @@ export default function SignatureApp() {
                 </Tooltip>
 
                 {showExportMenu && (
-                  <div className="absolute bottom-full left-0 mb-1 bg-neutral-950 border border-neutral-800">
+                  <div role="menu" className="absolute bottom-full left-0 mb-1 bg-neutral-950 border border-neutral-700">
                     <button
+                      role="menuitem"
                       onClick={() => { downloadJPG(); setShowExportMenu(false) }}
-                      className="w-full h-8 px-3 flex items-center gap-2 text-[10px] uppercase tracking-wider font-light text-neutral-500 hover:bg-neutral-900 hover:text-neutral-300 transition-colors"
+                      className="w-full h-8 px-3 flex items-center gap-2 text-[10px] uppercase tracking-wider font-light text-neutral-400 hover:bg-neutral-900 hover:text-neutral-200 transition-[background-color,color] focus-visible:outline-none focus-visible:bg-neutral-900 focus-visible:text-neutral-200"
                     >
-                      <Download className="w-3 h-3" strokeWidth={1.5} />
+                      <Download aria-hidden="true" className="w-3 h-3" strokeWidth={1.5} />
                       JPG
                     </button>
                     <button
+                      role="menuitem"
                       onClick={() => { downloadSVG(); setShowExportMenu(false) }}
-                      className="w-full h-8 px-3 flex items-center gap-2 text-[10px] uppercase tracking-wider font-light text-neutral-500 hover:bg-neutral-900 hover:text-neutral-300 transition-colors"
+                      className="w-full h-8 px-3 flex items-center gap-2 text-[10px] uppercase tracking-wider font-light text-neutral-400 hover:bg-neutral-900 hover:text-neutral-200 transition-[background-color,color] focus-visible:outline-none focus-visible:bg-neutral-900 focus-visible:text-neutral-200"
                     >
-                      <FileCode className="w-3 h-3" strokeWidth={1.5} />
+                      <FileCode aria-hidden="true" className="w-3 h-3" strokeWidth={1.5} />
                       SVG
                     </button>
                   </div>
@@ -534,15 +545,18 @@ export default function SignatureApp() {
                   <button
                     onClick={copyToClipboard}
                     disabled={!name.trim()}
-                    className="h-8 w-8 sm:h-9 sm:w-9 flex items-center justify-center bg-neutral-950 border border-neutral-900 hover:bg-neutral-900 transition-colors text-neutral-600 hover:text-neutral-400 disabled:opacity-30 disabled:hover:bg-neutral-950 disabled:cursor-not-allowed"
+                    aria-label={copyFeedback ? "Copied to clipboard" : "Copy to clipboard"}
+                    className="h-8 w-8 sm:h-9 sm:w-9 flex items-center justify-center bg-neutral-950 border border-neutral-800 hover:bg-neutral-900 transition-[background-color,color] text-neutral-400 hover:text-neutral-300 disabled:opacity-40 disabled:hover:bg-neutral-950 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-neutral-500"
                   >
                     <span className="relative w-4 h-4">
                       <Copy
-                        className={`w-4 h-4 absolute inset-0 transition-all duration-200 ${copyFeedback ? "opacity-0 scale-50" : "opacity-100 scale-100"}`}
+                        aria-hidden="true"
+                        className={`w-4 h-4 absolute inset-0 transition-[opacity,transform] duration-200 ${copyFeedback ? "opacity-0 scale-50" : "opacity-100 scale-100"}`}
                         strokeWidth={1.5}
                       />
                       <Check
-                        className={`w-4 h-4 absolute inset-0 text-neutral-300 transition-all duration-200 ${copyFeedback ? "opacity-100 scale-100" : "opacity-0 scale-50"}`}
+                        aria-hidden="true"
+                        className={`w-4 h-4 absolute inset-0 text-neutral-300 transition-[opacity,transform] duration-200 ${copyFeedback ? "opacity-100 scale-100" : "opacity-0 scale-50"}`}
                         strokeWidth={1.5}
                       />
                     </span>
@@ -561,9 +575,10 @@ export default function SignatureApp() {
                   <button
                     onClick={clearSignature}
                     disabled={!name}
-                    className="h-8 w-8 sm:h-9 sm:w-9 flex items-center justify-center bg-neutral-950 border border-neutral-900 hover:bg-neutral-900 transition-colors text-neutral-600 hover:text-neutral-400 disabled:opacity-30 disabled:hover:bg-neutral-950 disabled:cursor-not-allowed"
+                    aria-label="Reset signature"
+                    className="h-8 w-8 sm:h-9 sm:w-9 flex items-center justify-center bg-neutral-950 border border-neutral-800 hover:bg-neutral-900 transition-[background-color,color] text-neutral-400 hover:text-neutral-300 disabled:opacity-40 disabled:hover:bg-neutral-950 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-neutral-500"
                   >
-                    <RotateCcw className="w-4 h-4" strokeWidth={1.5} />
+                    <RotateCcw aria-hidden="true" className="w-4 h-4" strokeWidth={1.5} />
                   </button>
                 </TooltipTrigger>
                 <TooltipContent side="top" sideOffset={8} className="bg-neutral-900 border-neutral-800 text-neutral-400 text-[10px] rounded-none px-2 py-1">
@@ -582,7 +597,7 @@ export default function SignatureApp() {
           href="https://laks.sh"
           target="_blank"
           rel="noopener noreferrer"
-          className="fixed top-3 right-4 text-[9px] uppercase tracking-[0.2em] text-neutral-800 hover:text-neutral-500 transition-colors"
+          className="fixed top-3 right-4 text-[9px] uppercase tracking-[0.2em] text-neutral-500 hover:text-neutral-300 transition-[color] focus-visible:outline-none focus-visible:text-neutral-300 focus-visible:ring-1 focus-visible:ring-neutral-500"
         >
           laks.sh
         </a>

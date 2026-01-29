@@ -9,9 +9,8 @@ interface KeyboardProps {
 
 const VercelLogo = () => (
   <svg
-    aria-label="Vercel logomark"
+    aria-hidden="true"
     height="10"
-    role="img"
     viewBox="0 0 74 64"
     className="fill-current"
   >
@@ -29,9 +28,9 @@ export function Keyboard({ activeKeys, typedKeys }: KeyboardProps) {
       return "bg-neutral-700 border-neutral-600 text-neutral-100"
     }
     if (isTyped) {
-      return "bg-neutral-900 border-neutral-700 text-neutral-400"
+      return "bg-neutral-900 border-neutral-600 text-neutral-300"
     }
-    return "bg-neutral-950 border-neutral-900 text-neutral-700 hover:bg-neutral-900/50 hover:text-neutral-600"
+    return "bg-neutral-950 border-neutral-800 text-neutral-500 hover:bg-neutral-900/50 hover:text-neutral-400"
   }
 
   const rows = [
@@ -87,7 +86,7 @@ export function Keyboard({ activeKeys, typedKeys }: KeyboardProps) {
               className={`
                 h-10 sm:h-12 flex items-center justify-center
                 text-[10px] sm:text-xs font-light tracking-wide
-                border transition-all duration-100
+                border transition-[background-color,border-color,color] duration-100
                 ${getKeyClass(key)}
               `}
             >
@@ -109,7 +108,7 @@ export function Keyboard({ activeKeys, typedKeys }: KeyboardProps) {
           style={{ flex: 4 }}
           className={`
             h-10 sm:h-12 flex items-center justify-center
-            border transition-all duration-100
+            border transition-[background-color,border-color,color] duration-100
             ${getKeyClass(" ")}
           `}
         >

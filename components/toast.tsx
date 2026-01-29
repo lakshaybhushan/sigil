@@ -12,7 +12,9 @@ export function Toast({ message, isVisible }: ToastProps) {
     <AnimatePresence>
       {isVisible && (
         <motion.div
-          className="fixed bottom-20 left-1/2 z-50 px-4 py-2 bg-neutral-900 border border-neutral-800 text-neutral-300 text-xs uppercase tracking-wider"
+          role="status"
+          aria-live="polite"
+          className="fixed bottom-20 left-1/2 z-50 px-4 py-2 bg-neutral-900 border border-neutral-700 text-neutral-200 text-xs uppercase tracking-wider"
           initial={{ opacity: 0, y: 20, x: "-50%" }}
           animate={{ opacity: 1, y: 0, x: "-50%" }}
           exit={{ opacity: 0, y: 10, x: "-50%" }}

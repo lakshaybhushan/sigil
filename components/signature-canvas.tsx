@@ -922,6 +922,8 @@ export const SignatureCanvas = forwardRef<SignatureCanvasRef, SignatureCanvasPro
     return (
       <canvas
         ref={canvasRef}
+        role="img"
+        aria-label={`Signature constellation for ${name}`}
         className="w-full h-full cursor-crosshair"
         style={{ display: "block", touchAction: "none" }}
         onMouseMove={handleMouseMove}

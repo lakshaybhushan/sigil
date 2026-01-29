@@ -76,7 +76,7 @@ export function Onboarding() {
           onClick={dismiss}
         >
           {/* Animated grid that draws in */}
-          <svg className="absolute inset-0 w-full h-full">
+          <svg aria-hidden="true" className="absolute inset-0 w-full h-full">
             <defs>
               <linearGradient id="gridFade" x1="0%" y1="0%" x2="100%" y2="100%">
                 <stop offset="0%" stopColor="white" stopOpacity="0.02" />
@@ -174,7 +174,7 @@ export function Onboarding() {
                 />
               </div>
               <motion.p
-                className="text-[10px] sm:text-[11px] uppercase tracking-[0.3em] sm:tracking-[0.5em] text-white/30 mt-6 sm:mt-8"
+                className="text-[10px] sm:text-[11px] uppercase tracking-[0.3em] sm:tracking-[0.5em] text-white/50 mt-6 sm:mt-8"
                 initial={{ opacity: 0 }}
                 animate={{ opacity: showContent ? 1 : 0 }}
                 transition={{ duration: 0.8 }}
@@ -192,15 +192,15 @@ export function Onboarding() {
             >
               <div className="flex flex-col sm:flex-row items-center justify-center gap-4 sm:gap-12 text-[11px] sm:text-[12px] uppercase tracking-[0.2em] sm:tracking-[0.25em]">
                 <div className="flex items-center gap-3 sm:gap-4">
-                  <span className="text-white/50">Type</span>
-                  <span className="text-white/20">→</span>
-                  <span className="text-white/30">Generate</span>
+                  <span className="text-white/70">Type</span>
+                  <span className="text-white/40">→</span>
+                  <span className="text-white/50">Generate</span>
                 </div>
-                <div className="hidden sm:block w-px h-4 bg-white/10" />
+                <div className="hidden sm:block w-px h-4 bg-white/20" />
                 <div className="flex items-center gap-3 sm:gap-4">
-                  <span className="text-white/50">Click</span>
-                  <span className="text-white/20">→</span>
-                  <span className="text-white/30">Stamp</span>
+                  <span className="text-white/70">Click</span>
+                  <span className="text-white/40">→</span>
+                  <span className="text-white/50">Stamp</span>
                 </div>
               </div>
             </motion.div>
@@ -208,17 +208,17 @@ export function Onboarding() {
             {/* Begin button */}
             <motion.button
               onClick={dismiss}
-              className="group relative px-10 py-4 text-[11px] uppercase tracking-[0.4em] text-white/40 transition-colors duration-300 hover:text-white/80"
+              className="group relative px-10 py-4 text-[11px] uppercase tracking-[0.4em] text-white/60 transition-[color] duration-300 hover:text-white/90 focus-visible:text-white/90 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-white/50"
               initial={{ opacity: 0 }}
               animate={{ opacity: showContent ? 1 : 0 }}
               transition={{ duration: 0.6, delay: 0.3 }}
             >
               <span className="relative z-10">Begin</span>
               {/* Corner accents */}
-              <span className="absolute top-0 left-0 w-3 h-3 border-t border-l border-white/20 group-hover:border-white/40 transition-colors" />
-              <span className="absolute top-0 right-0 w-3 h-3 border-t border-r border-white/20 group-hover:border-white/40 transition-colors" />
-              <span className="absolute bottom-0 left-0 w-3 h-3 border-b border-l border-white/20 group-hover:border-white/40 transition-colors" />
-              <span className="absolute bottom-0 right-0 w-3 h-3 border-b border-r border-white/20 group-hover:border-white/40 transition-colors" />
+              <span aria-hidden="true" className="absolute top-0 left-0 w-3 h-3 border-t border-l border-white/30 group-hover:border-white/60 group-focus-visible:border-white/60 transition-[border-color]" />
+              <span aria-hidden="true" className="absolute top-0 right-0 w-3 h-3 border-t border-r border-white/30 group-hover:border-white/60 group-focus-visible:border-white/60 transition-[border-color]" />
+              <span aria-hidden="true" className="absolute bottom-0 left-0 w-3 h-3 border-b border-l border-white/30 group-hover:border-white/60 group-focus-visible:border-white/60 transition-[border-color]" />
+              <span aria-hidden="true" className="absolute bottom-0 right-0 w-3 h-3 border-b border-r border-white/30 group-hover:border-white/60 group-focus-visible:border-white/60 transition-[border-color]" />
             </motion.button>
 
             {/* Footer */}
@@ -228,12 +228,12 @@ export function Onboarding() {
               animate={{ opacity: showContent ? 1 : 0 }}
               transition={{ duration: 0.6, delay: 0.5 }}
             >
-              <p className="text-white/15 mb-3">Tap anywhere to dismiss</p>
+              <p className="text-white/40 mb-3">Tap anywhere to dismiss…</p>
               <a
                 href="https://laks.sh"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-white/25 hover:text-white/50 transition-colors"
+                className="text-white/50 hover:text-white/70 focus-visible:text-white/70 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-white/40 transition-[color]"
                 onClick={(e) => e.stopPropagation()}
               >
                 Made by laks.sh
