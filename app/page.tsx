@@ -4,7 +4,7 @@ import type React from "react"
 import { useState, useRef, useCallback, useEffect } from "react"
 import { motion } from "framer-motion"
 import { Input } from "@/components/ui/input"
-import { SignatureCanvas, type SignatureCanvasRef, type Theme, type FrameStyle } from "@/components/signature-canvas"
+import { SignatureCanvas, type SignatureCanvasRef, type Theme, type FrameStyle, type PatternStyle } from "@/components/signature-canvas"
 import { Keyboard } from "@/components/keyboard"
 import { Toast } from "@/components/toast"
 import { Onboarding } from "@/components/onboarding"
@@ -124,10 +124,69 @@ const NoFrameIcon = () => (
   </svg>
 )
 
+// Pattern style icons
+const ClassicIcon = () => (
+  <svg aria-hidden="true" width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5">
+    <circle cx="7" cy="3" r="1.5" fill="currentColor" />
+    <circle cx="3" cy="10" r="1.5" fill="currentColor" />
+    <circle cx="11" cy="10" r="1.5" fill="currentColor" />
+    <path d="M7 3L3 10M7 3L11 10M3 10L11 10" />
+  </svg>
+)
+
+const OrbitalIcon = () => (
+  <svg aria-hidden="true" width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1">
+    <ellipse cx="7" cy="7" rx="5.5" ry="3" />
+    <ellipse cx="7" cy="7" rx="5.5" ry="3" transform="rotate(60 7 7)" />
+    <ellipse cx="7" cy="7" rx="5.5" ry="3" transform="rotate(120 7 7)" />
+    <circle cx="7" cy="7" r="1" fill="currentColor" />
+  </svg>
+)
+
+const SpiralIcon = () => (
+  <svg aria-hidden="true" width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5">
+    <path d="M7 7C7 5.5 8.5 4 10 4C12 4 13 6 13 7C13 9.5 10.5 12 7 12C3 12 1 9 1 6C1 2.5 4 0.5 7 0.5" strokeLinecap="round" />
+  </svg>
+)
+
+const GeometricIcon = () => (
+  <svg aria-hidden="true" width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5">
+    <polygon points="7,1 13,5 11,12 3,12 1,5" />
+    <circle cx="7" cy="7" r="1" fill="currentColor" />
+    <path d="M7 1L7 7M13 5L7 7M11 12L7 7M3 12L7 7M1 5L7 7" strokeWidth="1" opacity="0.5" />
+  </svg>
+)
+
+const WaveIcon = () => (
+  <svg aria-hidden="true" width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5">
+    <path d="M1 7C2 4 3 4 4 7C5 10 6 10 7 7C8 4 9 4 10 7C11 10 12 10 13 7" strokeLinecap="round" />
+  </svg>
+)
+
+const ScatterIcon = () => (
+  <svg aria-hidden="true" width="14" height="14" viewBox="0 0 14 14" fill="currentColor">
+    <circle cx="3" cy="4" r="1.5" />
+    <circle cx="10" cy="3" r="1.5" />
+    <circle cx="7" cy="7" r="1.5" />
+    <circle cx="4" cy="11" r="1.5" />
+    <circle cx="11" cy="9" r="1.5" />
+  </svg>
+)
+
+const PATTERN_OPTIONS: { style: PatternStyle; icon: React.ReactNode; label: string }[] = [
+  { style: "classic", icon: <ClassicIcon />, label: "Classic" },
+  { style: "orbital", icon: <OrbitalIcon />, label: "Orbital" },
+  { style: "spiral", icon: <SpiralIcon />, label: "Spiral" },
+  { style: "geometric", icon: <GeometricIcon />, label: "Geometric" },
+  { style: "wave", icon: <WaveIcon />, label: "Wave" },
+  { style: "scatter", icon: <ScatterIcon />, label: "Scatter" },
+]
+
 export default function SignatureApp() {
   const [name, setName] = useState("")
   const [theme, setTheme] = useState<Theme>("mono")
   const [frameStyle, setFrameStyle] = useState<FrameStyle>("none")
+  const [patternStyle, setPatternStyle] = useState<PatternStyle>("classic")
   const [activeKeys, setActiveKeys] = useState<Set<string>>(new Set())
   const [typedKeys, setTypedKeys] = useState<Set<string>>(new Set())
   const [copyFeedback, setCopyFeedback] = useState(false)
@@ -345,6 +404,7 @@ export default function SignatureApp() {
                     name={name}
                     theme={theme}
                     frameStyle={frameStyle}
+                    patternStyle={patternStyle}
                   />
                 ) : (
                   <div className="absolute inset-0 flex items-center justify-center">
@@ -453,7 +513,32 @@ export default function SignatureApp() {
               </Tooltip>
               
               <div className="w-1 sm:w-3" />
-              
+
+              {/* Pattern Style Options */}
+              {PATTERN_OPTIONS.map((option) => (
+                <Tooltip key={option.style}>
+                  <TooltipTrigger asChild>
+                    <button
+                      onClick={() => setPatternStyle(option.style)}
+                      aria-label={option.label}
+                      aria-pressed={patternStyle === option.style}
+                      className={`h-8 w-8 sm:h-9 sm:w-9 flex items-center justify-center bg-neutral-950 border border-neutral-800 transition-[background-color,color] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-neutral-500 ${
+                        patternStyle === option.style
+                          ? "text-neutral-200 bg-neutral-800"
+                          : "text-neutral-400 hover:bg-neutral-900 hover:text-neutral-300"
+                      }`}
+                    >
+                      {option.icon}
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent side="top" sideOffset={8} className="bg-neutral-900 border-neutral-800 text-neutral-400 text-[10px] rounded-none px-2 py-1">
+                    {option.label.toUpperCase()}
+                  </TooltipContent>
+                </Tooltip>
+              ))}
+
+              <div className="w-1 sm:w-3" />
+
               {/* Frame Style Options */}
               {frameOptions.map((option) => (
                 <Tooltip key={option.style}>

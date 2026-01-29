@@ -6,6 +6,7 @@ import { useEffect, useRef, useCallback, useState, useImperativeHandle, forwardR
 
 export type Theme = "mono" | "amber" | "blue" | "emerald" | "violet" | "rose" | "cyan"
 export type FrameStyle = "none" | "thin" | "double" | "corners"
+export type PatternStyle = "classic" | "orbital" | "spiral" | "geometric" | "wave" | "scatter"
 
 export interface SignatureCanvasRef {
   exportSVG: () => string
@@ -19,6 +20,7 @@ interface SignatureCanvasProps {
   onKeyPress?: () => void
   theme?: Theme
   frameStyle?: FrameStyle
+  patternStyle?: PatternStyle
 }
 
 const THEMES = {
@@ -102,6 +104,518 @@ const THEMES = {
 }
 
 const VOWELS = new Set(["A", "E", "I", "O", "U"])
+const PHI = (1 + Math.sqrt(5)) / 2 // Golden ratio
+
+// Delaunay triangulation for natural connections
+function delaunayTriangulate(points: { x: number; y: number }[]): [number, number][] {
+  if (points.length < 3) {
+    if (points.length === 2) return [[0, 1]]
+    return []
+  }
+
+  const n = points.length
+  const indices = Array.from({ length: n }, (_, i) => i)
+  const edges: [number, number][] = []
+  const edgeSet = new Set<string>()
+
+  const addEdge = (i: number, j: number) => {
+    const key = i < j ? `${i}-${j}` : `${j}-${i}`
+    if (!edgeSet.has(key)) {
+      edgeSet.add(key)
+      edges.push([i, j])
+    }
+  }
+
+  // Simple approach: for each point, connect to nearest neighbors
+  // Then add triangulation edges
+  for (let i = 0; i < n; i++) {
+    const distances: { idx: number; dist: number }[] = []
+    for (let j = 0; j < n; j++) {
+      if (i !== j) {
+        const dx = points[i].x - points[j].x
+        const dy = points[i].y - points[j].y
+        distances.push({ idx: j, dist: Math.sqrt(dx * dx + dy * dy) })
+      }
+    }
+    distances.sort((a, b) => a.dist - b.dist)
+
+    // Connect to 2-3 nearest neighbors
+    const connectCount = Math.min(3, distances.length)
+    for (let k = 0; k < connectCount; k++) {
+      addEdge(i, distances[k].idx)
+    }
+  }
+
+  // Add some cross-connections for triangulation effect
+  if (n >= 4) {
+    for (let i = 0; i < n; i++) {
+      for (let j = i + 2; j < n; j++) {
+        const dx = points[i].x - points[j].x
+        const dy = points[i].y - points[j].y
+        const dist = Math.sqrt(dx * dx + dy * dy)
+        const avgDist = Math.min(points[0]?.x || 100, points[0]?.y || 100) * 0.8
+        if (dist < avgDist && Math.random() > 0.5) {
+          addEdge(i, j)
+        }
+      }
+    }
+  }
+
+  return edges
+}
+
+// Minimum spanning tree using Prim's algorithm
+function minimumSpanningTree(points: { x: number; y: number }[]): [number, number][] {
+  if (points.length < 2) return []
+
+  const n = points.length
+  const inTree = new Set<number>([0])
+  const edges: [number, number][] = []
+
+  while (inTree.size < n) {
+    let minDist = Infinity
+    let minEdge: [number, number] | null = null
+
+    for (const i of inTree) {
+      for (let j = 0; j < n; j++) {
+        if (!inTree.has(j)) {
+          const dx = points[i].x - points[j].x
+          const dy = points[i].y - points[j].y
+          const dist = Math.sqrt(dx * dx + dy * dy)
+          if (dist < minDist) {
+            minDist = dist
+            minEdge = [i, j]
+          }
+        }
+      }
+    }
+
+    if (minEdge) {
+      edges.push(minEdge)
+      inTree.add(minEdge[1])
+    } else {
+      break
+    }
+  }
+
+  return edges
+}
+
+// Pattern generators
+interface PatternResult {
+  points: { x: number; y: number; char: string; isVowel: boolean }[]
+  edges: [number, number][]
+}
+
+function generateClassicPattern(
+  chars: string[],
+  centerX: number,
+  centerY: number,
+  maxRadius: number,
+  seed: number
+): PatternResult {
+  const points: PatternResult["points"] = []
+  const seenChars = new Map<string, number>()
+
+  for (let i = 0; i < chars.length; i++) {
+    const char = chars[i]
+    if (seenChars.has(char)) continue
+
+    const code = char.charCodeAt(0)
+    const isVowel = VOWELS.has(char)
+    const alphabetPos = code - 65
+
+    const baseAngle = (alphabetPos / 26) * Math.PI * 2
+    const positionOffset = (i / Math.max(chars.length, 1)) * 0.4 - 0.2
+    const seedOffset = Math.sin(seed + alphabetPos * 137.5) * 0.3
+    const angle = baseAngle + positionOffset + seedOffset
+
+    const baseRadius = isVowel ? 0.55 : 0.75
+    const radiusVariation = 0.85 + Math.abs(Math.sin(seed + code * 0.7)) * 0.3
+    const radius = baseRadius * radiusVariation
+
+    const x = centerX + Math.cos(angle) * radius * maxRadius
+    const y = centerY + Math.sin(angle) * radius * maxRadius
+
+    seenChars.set(char, points.length)
+    points.push({ x, y, char, isVowel })
+  }
+
+  // Sequential connections
+  const edges: [number, number][] = []
+  let prevIndex = -1
+  for (let i = 0; i < chars.length; i++) {
+    const idx = seenChars.get(chars[i])
+    if (idx !== undefined && prevIndex >= 0 && prevIndex !== idx) {
+      edges.push([prevIndex, idx])
+    }
+    if (idx !== undefined) prevIndex = idx
+  }
+
+  // Close the loop
+  if (points.length >= 3) {
+    const firstIdx = seenChars.get(chars[0])
+    if (firstIdx !== undefined && prevIndex >= 0 && firstIdx !== prevIndex) {
+      edges.push([prevIndex, firstIdx])
+    }
+  }
+
+  // Cross connections
+  if (points.length >= 4) {
+    for (let i = 0; i < points.length; i++) {
+      const crossIndex = (i + 2) % points.length
+      edges.push([i, crossIndex])
+    }
+  }
+
+  return { points, edges }
+}
+
+function generateOrbitalPattern(
+  chars: string[],
+  centerX: number,
+  centerY: number,
+  maxRadius: number,
+  seed: number
+): PatternResult {
+  const points: PatternResult["points"] = []
+  const seenChars = new Map<string, number>()
+  const uniqueChars = [...new Set(chars)]
+
+  // Distribute points across 3 orbital rings
+  const orbits = [0.35, 0.6, 0.85]
+
+  for (let i = 0; i < uniqueChars.length; i++) {
+    const char = uniqueChars[i]
+    if (seenChars.has(char)) continue
+
+    const isVowel = VOWELS.has(char)
+    const orbitIndex = isVowel ? 0 : (i % 2 === 0 ? 1 : 2)
+    const orbit = orbits[orbitIndex]
+
+    // Distribute evenly within each orbit
+    const charsInOrbit = uniqueChars.filter((c, j) => {
+      const v = VOWELS.has(c)
+      const oi = v ? 0 : (j % 2 === 0 ? 1 : 2)
+      return oi === orbitIndex
+    })
+    const posInOrbit = charsInOrbit.indexOf(char)
+    const totalInOrbit = charsInOrbit.length
+
+    const baseAngle = (posInOrbit / Math.max(totalInOrbit, 1)) * Math.PI * 2
+    const seedOffset = Math.sin(seed + char.charCodeAt(0) * 0.1) * 0.2
+    const angle = baseAngle + seedOffset - Math.PI / 2
+
+    // Slight ellipse effect
+    const ellipseX = 1.1
+    const ellipseY = 0.9
+
+    const x = centerX + Math.cos(angle) * orbit * maxRadius * ellipseX
+    const y = centerY + Math.sin(angle) * orbit * maxRadius * ellipseY
+
+    seenChars.set(char, points.length)
+    points.push({ x, y, char, isVowel })
+  }
+
+  // Connect with Delaunay for natural look
+  const edges = delaunayTriangulate(points)
+
+  return { points, edges }
+}
+
+function generateSpiralPattern(
+  chars: string[],
+  centerX: number,
+  centerY: number,
+  maxRadius: number,
+  seed: number
+): PatternResult {
+  const points: PatternResult["points"] = []
+  const seenChars = new Map<string, number>()
+  const uniqueChars = [...new Set(chars)]
+
+  // Golden spiral placement
+  for (let i = 0; i < uniqueChars.length; i++) {
+    const char = uniqueChars[i]
+    if (seenChars.has(char)) continue
+
+    const isVowel = VOWELS.has(char)
+
+    // Golden angle in radians
+    const goldenAngle = Math.PI * 2 / (PHI * PHI)
+    const angle = i * goldenAngle + seed * 0.1
+
+    // Radius increases with square root for even distribution
+    const t = (i + 1) / (uniqueChars.length + 1)
+    const radius = Math.sqrt(t) * maxRadius * 0.9
+
+    const x = centerX + Math.cos(angle) * radius
+    const y = centerY + Math.sin(angle) * radius
+
+    seenChars.set(char, points.length)
+    points.push({ x, y, char, isVowel })
+  }
+
+  // Connect sequentially along the spiral
+  const edges: [number, number][] = []
+  for (let i = 0; i < points.length - 1; i++) {
+    edges.push([i, i + 1])
+  }
+
+  // Add some cross-connections for visual interest
+  if (points.length >= 5) {
+    for (let i = 0; i < points.length; i++) {
+      const skipIndex = (i + 3) % points.length
+      if (Math.abs(i - skipIndex) > 1) {
+        edges.push([i, skipIndex])
+      }
+    }
+  }
+
+  return { points, edges }
+}
+
+function generateGeometricPattern(
+  chars: string[],
+  centerX: number,
+  centerY: number,
+  maxRadius: number,
+  seed: number
+): PatternResult {
+  const points: PatternResult["points"] = []
+  const seenChars = new Map<string, number>()
+  const uniqueChars = [...new Set(chars)]
+  const n = uniqueChars.length
+
+  if (n === 0) return { points: [], edges: [] }
+
+  // Choose geometric shape based on character count
+  // Pentagon for 5, hexagon for 6, etc. with inner structure
+  const outerCount = Math.min(n, Math.max(3, Math.ceil(n * 0.6)))
+  const innerCount = n - outerCount
+
+  // Outer ring - regular polygon
+  for (let i = 0; i < outerCount; i++) {
+    const char = uniqueChars[i]
+    if (seenChars.has(char)) continue
+
+    const isVowel = VOWELS.has(char)
+    const angle = (i / outerCount) * Math.PI * 2 - Math.PI / 2
+
+    const x = centerX + Math.cos(angle) * maxRadius * 0.85
+    const y = centerY + Math.sin(angle) * maxRadius * 0.85
+
+    seenChars.set(char, points.length)
+    points.push({ x, y, char, isVowel })
+  }
+
+  // Inner ring or center point
+  if (innerCount > 0) {
+    const innerRadius = maxRadius * 0.4
+    for (let i = 0; i < innerCount; i++) {
+      const char = uniqueChars[outerCount + i]
+      if (seenChars.has(char)) continue
+
+      const isVowel = VOWELS.has(char)
+
+      if (innerCount === 1) {
+        // Single center point
+        seenChars.set(char, points.length)
+        points.push({ x: centerX, y: centerY, char, isVowel })
+      } else {
+        // Inner polygon
+        const angle = (i / innerCount) * Math.PI * 2 - Math.PI / 2 + Math.PI / innerCount
+        const x = centerX + Math.cos(angle) * innerRadius
+        const y = centerY + Math.sin(angle) * innerRadius
+
+        seenChars.set(char, points.length)
+        points.push({ x, y, char, isVowel })
+      }
+    }
+  }
+
+  // Connect outer polygon
+  const edges: [number, number][] = []
+  for (let i = 0; i < outerCount; i++) {
+    edges.push([i, (i + 1) % outerCount])
+  }
+
+  // Connect all outer to center/inner
+  if (innerCount === 1 && points.length > outerCount) {
+    const centerIdx = outerCount
+    for (let i = 0; i < outerCount; i++) {
+      edges.push([i, centerIdx])
+    }
+  } else if (innerCount > 1) {
+    // Connect inner polygon
+    for (let i = 0; i < innerCount; i++) {
+      edges.push([outerCount + i, outerCount + ((i + 1) % innerCount)])
+    }
+    // Connect outer to inner
+    for (let i = 0; i < outerCount; i++) {
+      const innerIdx = outerCount + (i % innerCount)
+      edges.push([i, innerIdx])
+    }
+  }
+
+  // Add star connections for visual interest
+  if (outerCount >= 5) {
+    const skip = Math.floor(outerCount / 2)
+    for (let i = 0; i < outerCount; i++) {
+      edges.push([i, (i + skip) % outerCount])
+    }
+  }
+
+  return { points, edges }
+}
+
+function generateWavePattern(
+  chars: string[],
+  centerX: number,
+  centerY: number,
+  maxRadius: number,
+  seed: number,
+  width: number,
+  height: number
+): PatternResult {
+  const points: PatternResult["points"] = []
+  const seenChars = new Map<string, number>()
+  const uniqueChars = [...new Set(chars)]
+  const n = uniqueChars.length
+
+  if (n === 0) return { points: [], edges: [] }
+
+  // Create wave pattern across the canvas
+  const waveHeight = maxRadius * 0.6
+  const startX = centerX - maxRadius * 0.9
+  const endX = centerX + maxRadius * 0.9
+
+  for (let i = 0; i < n; i++) {
+    const char = uniqueChars[i]
+    if (seenChars.has(char)) continue
+
+    const isVowel = VOWELS.has(char)
+    const t = n === 1 ? 0.5 : i / (n - 1)
+
+    const x = startX + t * (endX - startX)
+
+    // Multiple wave frequencies based on character
+    const charCode = char.charCodeAt(0)
+    const freq1 = 2 + (seed % 3)
+    const freq2 = 3 + (charCode % 2)
+
+    const wave1 = Math.sin(t * Math.PI * freq1 + seed * 0.5) * waveHeight * 0.6
+    const wave2 = Math.sin(t * Math.PI * freq2 + charCode * 0.1) * waveHeight * 0.3
+    const y = centerY + wave1 + wave2
+
+    seenChars.set(char, points.length)
+    points.push({ x, y, char, isVowel })
+  }
+
+  // Connect sequentially
+  const edges: [number, number][] = []
+  for (let i = 0; i < points.length - 1; i++) {
+    edges.push([i, i + 1])
+  }
+
+  // Add vertical connections for visual depth
+  if (points.length >= 4) {
+    for (let i = 0; i < points.length - 2; i += 2) {
+      edges.push([i, i + 2])
+    }
+  }
+
+  return { points, edges }
+}
+
+function generateScatterPattern(
+  chars: string[],
+  centerX: number,
+  centerY: number,
+  maxRadius: number,
+  seed: number
+): PatternResult {
+  const points: PatternResult["points"] = []
+  const seenChars = new Map<string, number>()
+  const uniqueChars = [...new Set(chars)]
+  const n = uniqueChars.length
+
+  if (n === 0) return { points: [], edges: [] }
+
+  // Use seeded random for deterministic placement
+  const seededRandom = (s: number) => {
+    const x = Math.sin(s * 9999) * 10000
+    return x - Math.floor(x)
+  }
+
+  // Generate initial positions
+  const initialPoints: { x: number; y: number; char: string; isVowel: boolean }[] = []
+
+  for (let i = 0; i < n; i++) {
+    const char = uniqueChars[i]
+    if (seenChars.has(char)) continue
+
+    const isVowel = VOWELS.has(char)
+    const charSeed = seed + char.charCodeAt(0) * 100 + i * 17
+
+    // Random position within radius
+    const angle = seededRandom(charSeed) * Math.PI * 2
+    const r = Math.sqrt(seededRandom(charSeed + 1)) * maxRadius * 0.85
+
+    const x = centerX + Math.cos(angle) * r
+    const y = centerY + Math.sin(angle) * r
+
+    seenChars.set(char, initialPoints.length)
+    initialPoints.push({ x, y, char, isVowel })
+  }
+
+  // Simple force-directed relaxation
+  const relaxedPoints = [...initialPoints]
+  const iterations = 20
+  const repulsion = maxRadius * 0.15
+
+  for (let iter = 0; iter < iterations; iter++) {
+    for (let i = 0; i < relaxedPoints.length; i++) {
+      let fx = 0, fy = 0
+
+      // Repulsion from other points
+      for (let j = 0; j < relaxedPoints.length; j++) {
+        if (i !== j) {
+          const dx = relaxedPoints[i].x - relaxedPoints[j].x
+          const dy = relaxedPoints[i].y - relaxedPoints[j].y
+          const dist = Math.sqrt(dx * dx + dy * dy) + 0.1
+          if (dist < repulsion * 2) {
+            const force = (repulsion / dist) * 0.1
+            fx += (dx / dist) * force
+            fy += (dy / dist) * force
+          }
+        }
+      }
+
+      // Attraction to center (keep points contained)
+      const dcx = centerX - relaxedPoints[i].x
+      const dcy = centerY - relaxedPoints[i].y
+      const distCenter = Math.sqrt(dcx * dcx + dcy * dcy)
+      if (distCenter > maxRadius * 0.7) {
+        fx += dcx * 0.02
+        fy += dcy * 0.02
+      }
+
+      relaxedPoints[i] = {
+        ...relaxedPoints[i],
+        x: relaxedPoints[i].x + fx,
+        y: relaxedPoints[i].y + fy
+      }
+    }
+  }
+
+  points.push(...relaxedPoints)
+
+  // Use Delaunay triangulation for organic connections
+  const edges = delaunayTriangulate(points)
+
+  return { points, edges }
+}
 
 function getLetterPosition(char: string, index: number, total: number, seed: number) {
   const code = char.toUpperCase().charCodeAt(0)
@@ -225,7 +739,7 @@ function lerpRgba(from: string, to: string, t: number): string {
 }
 
 export const SignatureCanvas = forwardRef<SignatureCanvasRef, SignatureCanvasProps>(
-  function SignatureCanvas({ name, onKeyPress, theme = "mono", frameStyle = "none" }, ref) {
+  function SignatureCanvas({ name, onKeyPress, theme = "mono", frameStyle = "none", patternStyle = "classic" }, ref) {
     const canvasRef = useRef<HTMLCanvasElement>(null)
     const pointsRef = useRef<Point[]>([])
     const linesRef = useRef<Line[]>([])
@@ -608,115 +1122,113 @@ export const SignatureCanvas = forwardRef<SignatureCanvasRef, SignatureCanvasPro
       const maxRadius = Math.min(width, height) * 0.38
 
       const cleanName = name.toUpperCase().replace(/[^A-Z]/g, "")
-      
+
       // Easter egg: VERCEL creates an equilateral triangle like the Vercel logo
       if (cleanName === "VERCEL") {
         const triangleSize = maxRadius * 1.2
         const triangleHeight = triangleSize * Math.sqrt(3) / 2
-        
+
         // Triangle points (pointing up like Vercel logo)
         const topPoint = { x: centerX, y: centerY - triangleHeight * 0.6 }
         const bottomLeft = { x: centerX - triangleSize / 2, y: centerY + triangleHeight * 0.4 }
         const bottomRight = { x: centerX + triangleSize / 2, y: centerY + triangleHeight * 0.4 }
-        
+
         const points: Point[] = [
           { x: topPoint.x, y: topPoint.y, char: "V", birthTime: now, isVowel: false, index: 0, twinkleOffset: 0, twinkleSpeed: 0.003, normalizedX: topPoint.x / width, normalizedY: topPoint.y / height },
           { x: bottomLeft.x, y: bottomLeft.y, char: "E", birthTime: now + 80, isVowel: true, index: 1, twinkleOffset: 2, twinkleSpeed: 0.003, normalizedX: bottomLeft.x / width, normalizedY: bottomLeft.y / height },
           { x: bottomRight.x, y: bottomRight.y, char: "L", birthTime: now + 160, isVowel: false, index: 2, twinkleOffset: 4, twinkleSpeed: 0.003, normalizedX: bottomRight.x / width, normalizedY: bottomRight.y / height },
         ]
-        
+
         const lines: Line[] = [
           { from: 0, to: 1, birthTime: now + 50, opacity: 1 },
           { from: 1, to: 2, birthTime: now + 130, opacity: 1 },
           { from: 2, to: 0, birthTime: now + 210, opacity: 1 },
         ]
-        
+
         pointsRef.current = points
         linesRef.current = lines
         return
       }
 
       const chars = cleanName.split("")
-      
+
       if (chars.length === 0) {
         pointsRef.current = []
         linesRef.current = []
         return
       }
 
+      // Generate seed from name
       let seed = 0
       for (let i = 0; i < name.length; i++) {
         seed = ((seed << 5) - seed) + name.charCodeAt(i)
         seed = seed & seed
       }
+      seed = Math.abs(seed)
 
-      const points: Point[] = []
-      const seenChars = new Map<string, number>()
-      
-      for (let i = 0; i < chars.length; i++) {
-        const char = chars[i]
-        if (seenChars.has(char)) continue
-        
-        const { angle, radius, isVowel } = getLetterPosition(char, i, chars.length, seed)
-        
-        const x = centerX + Math.cos(angle) * radius * maxRadius
-        const y = centerY + Math.sin(angle) * radius * maxRadius
-        
-        seenChars.set(char, points.length)
-        points.push({
-          x,
-          y,
-          char,
-          birthTime: now + points.length * 60,
-          isVowel,
-          index: points.length,
-          twinkleOffset: Math.random() * Math.PI * 2,
-          twinkleSpeed: 0.002 + Math.random() * 0.002,
-          normalizedX: x / width,
-          normalizedY: y / height,
-        })
+      // Generate pattern based on selected style
+      let patternResult: PatternResult
+
+      switch (patternStyle) {
+        case "orbital":
+          patternResult = generateOrbitalPattern(chars, centerX, centerY, maxRadius, seed)
+          break
+        case "spiral":
+          patternResult = generateSpiralPattern(chars, centerX, centerY, maxRadius, seed)
+          break
+        case "geometric":
+          patternResult = generateGeometricPattern(chars, centerX, centerY, maxRadius, seed)
+          break
+        case "wave":
+          patternResult = generateWavePattern(chars, centerX, centerY, maxRadius, seed, width, height)
+          break
+        case "scatter":
+          patternResult = generateScatterPattern(chars, centerX, centerY, maxRadius, seed)
+          break
+        case "classic":
+        default:
+          patternResult = generateClassicPattern(chars, centerX, centerY, maxRadius, seed)
+          break
       }
 
-      const lines: Line[] = []
+      // Convert pattern result to Points with animation data
+      const points: Point[] = patternResult.points.map((p, i) => ({
+        x: p.x,
+        y: p.y,
+        char: p.char,
+        birthTime: now + i * 60,
+        isVowel: p.isVowel,
+        index: i,
+        twinkleOffset: Math.random() * Math.PI * 2,
+        twinkleSpeed: 0.002 + Math.random() * 0.002,
+        normalizedX: p.x / width,
+        normalizedY: p.y / height,
+      }))
+
+      // Convert edges to Lines with animation data
       const addedLines = new Set<string>()
-      
-      const addLine = (from: number, to: number, delay: number, opacity: number) => {
+      const lines: Line[] = []
+
+      for (let i = 0; i < patternResult.edges.length; i++) {
+        const [from, to] = patternResult.edges[i]
         const key = `${Math.min(from, to)}-${Math.max(from, to)}`
-        if (addedLines.has(key) || from === to || from < 0 || to < 0) return
-        if (from >= points.length || to >= points.length) return
+        if (addedLines.has(key) || from === to || from < 0 || to < 0) continue
+        if (from >= points.length || to >= points.length) continue
         addedLines.add(key)
-        lines.push({ from, to, birthTime: now + delay, opacity })
-      }
 
-      let prevIndex = -1
-      for (let i = 0; i < chars.length; i++) {
-        const char = chars[i]
-        const currentIndex = seenChars.get(char)
-        if (currentIndex === undefined) continue
-        
-        if (prevIndex >= 0) {
-          addLine(prevIndex, currentIndex, i * 60 + 30, 0.9)
-        }
-        prevIndex = currentIndex
-      }
-
-      if (points.length >= 3) {
-        const firstIndex = seenChars.get(chars[0])
-        if (firstIndex !== undefined && prevIndex >= 0 && firstIndex !== prevIndex) {
-          addLine(prevIndex, firstIndex, chars.length * 60 + 50, 0.5)
-        }
-      }
-
-      if (points.length >= 4) {
-        for (let i = 0; i < points.length; i++) {
-          const crossIndex = (i + 2) % points.length
-          addLine(i, crossIndex, chars.length * 60 + 80 + i * 30, 0.25)
-        }
+        // Vary opacity based on edge index for visual depth
+        const baseOpacity = 0.9 - (i / patternResult.edges.length) * 0.5
+        lines.push({
+          from,
+          to,
+          birthTime: now + Math.max(points[from]?.birthTime || 0, points[to]?.birthTime || 0) - now + 30,
+          opacity: Math.max(0.3, baseOpacity)
+        })
       }
 
       pointsRef.current = points
       linesRef.current = lines
-    }, [name])
+    }, [name, patternStyle])
 
     const draw = useCallback((time: number) => {
       const canvas = canvasRef.current
@@ -893,7 +1405,7 @@ export const SignatureCanvas = forwardRef<SignatureCanvasRef, SignatureCanvasPro
         generateSignature()
         prevNameRef.current = name
       }
-      
+
       animationRef.current = requestAnimationFrame(draw)
 
       return () => {
@@ -902,6 +1414,11 @@ export const SignatureCanvas = forwardRef<SignatureCanvasRef, SignatureCanvasPro
         }
       }
     }, [name, generateSignature, draw, onKeyPress])
+
+    // Regenerate when pattern style changes
+    useEffect(() => {
+      generateSignature()
+    }, [patternStyle, generateSignature])
 
     useEffect(() => {
       let resizeTimeout: NodeJS.Timeout
