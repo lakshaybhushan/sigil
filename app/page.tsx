@@ -8,7 +8,8 @@ import { SignatureCanvas, type SignatureCanvasRef, type Theme, type FrameStyle, 
 import { Keyboard } from "@/components/keyboard"
 import { Toast } from "@/components/toast"
 import { Onboarding } from "@/components/onboarding"
-import { Download, RotateCcw, Copy, Volume2, VolumeX, FileCode, Square, Columns2, Check } from "lucide-react"
+import { Download, RotateCcw, Copy, Volume2, VolumeX, FileCode, Square, Columns2, Check, Settings2, Info, X } from "lucide-react"
+import { AnimatePresence } from "framer-motion"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 
 type SoundPack = "mechanical" | "membrane" | "typewriter"
@@ -191,6 +192,8 @@ export default function SignatureApp() {
   const [typedKeys, setTypedKeys] = useState<Set<string>>(new Set())
   const [copyFeedback, setCopyFeedback] = useState(false)
   const [showExportMenu, setShowExportMenu] = useState(false)
+  const [showSettingsMenu, setShowSettingsMenu] = useState(false)
+  const [showInfoModal, setShowInfoModal] = useState(false)
   const [soundEnabled, setSoundEnabled] = useState(true)
   const [soundPack, setSoundPack] = useState<SoundPack>("mechanical")
   const [toast, setToast] = useState<{ message: string; visible: boolean }>({ message: "", visible: false })
@@ -198,6 +201,7 @@ export default function SignatureApp() {
   const canvasRef = useRef<SignatureCanvasRef>(null)
   const audioContextRef = useRef<AudioContext | null>(null)
   const exportMenuRef = useRef<HTMLDivElement>(null)
+  const settingsMenuRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
 
   const initAudio = useCallback(() => {
@@ -323,16 +327,36 @@ export default function SignatureApp() {
       if (exportMenuRef.current && !exportMenuRef.current.contains(event.target as Node)) {
         setShowExportMenu(false)
       }
+      if (settingsMenuRef.current && !settingsMenuRef.current.contains(event.target as Node)) {
+        setShowSettingsMenu(false)
+      }
     }
 
-    if (showExportMenu) {
+    if (showExportMenu || showSettingsMenu) {
       document.addEventListener("mousedown", handleClickOutside)
     }
 
     return () => {
       document.removeEventListener("mousedown", handleClickOutside)
     }
-  }, [showExportMenu])
+  }, [showExportMenu, showSettingsMenu])
+
+  // Close info modal with Escape key
+  useEffect(() => {
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && showInfoModal) {
+        setShowInfoModal(false)
+      }
+    }
+
+    if (showInfoModal) {
+      document.addEventListener("keydown", handleEscape)
+    }
+
+    return () => {
+      document.removeEventListener("keydown", handleEscape)
+    }
+  }, [showInfoModal])
 
   const frameOptions: { style: FrameStyle; icon: React.ReactNode; label: string }[] = [
     { style: "none", icon: <NoFrameIcon />, label: "No Frame" },
@@ -474,14 +498,125 @@ export default function SignatureApp() {
           transition={{ type: "spring", stiffness: 80, damping: 20, delay: 0.5 }}
         >
           <div className="flex items-center justify-center">
-            <div className="flex items-center gap-0.5 sm:gap-px">
-              {/* Sound Toggle */}
+            <div className="flex items-center gap-px">
+              {/* Mobile Settings Menu */}
+              <div className="relative sm:hidden" ref={settingsMenuRef}>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button
+                      onClick={() => setShowSettingsMenu(!showSettingsMenu)}
+                      aria-label="Settings"
+                      aria-expanded={showSettingsMenu}
+                      aria-haspopup="menu"
+                      className="h-8 w-8 flex items-center justify-center bg-neutral-950 border border-neutral-800 hover:bg-neutral-900 transition-[background-color,color] text-neutral-400 hover:text-neutral-300 cursor-pointer focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-neutral-500"
+                    >
+                      <Settings2 className="w-4 h-4" strokeWidth={1.5} />
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent side="top" sideOffset={8} className="bg-neutral-900 border-neutral-800 text-neutral-400 text-[10px] rounded-none px-2 py-1">
+                    SETTINGS
+                  </TooltipContent>
+                </Tooltip>
+
+                {showSettingsMenu && (
+                  <div role="menu" className="absolute bottom-full left-0 mb-1 bg-neutral-950 border border-neutral-700 p-2 min-w-[200px]">
+                    {/* Sound Section */}
+                    <div className="mb-3">
+                      <div className="text-[9px] uppercase tracking-wider text-neutral-500 mb-1.5 px-1">Sound</div>
+                      <div className="flex items-center gap-1">
+                        <button
+                          onClick={() => setSoundEnabled(!soundEnabled)}
+                          aria-label={soundEnabled ? "Mute sound" : "Unmute sound"}
+                          className="h-8 w-8 flex items-center justify-center bg-neutral-900 border border-neutral-800 hover:bg-neutral-800 transition-[background-color,color] text-neutral-400 hover:text-neutral-300 cursor-pointer"
+                        >
+                          {soundEnabled ? <Volume2 className="w-4 h-4" strokeWidth={1.5} /> : <VolumeX className="w-4 h-4" strokeWidth={1.5} />}
+                        </button>
+                        <button
+                          onClick={cycleSoundPack}
+                          disabled={!soundEnabled}
+                          className={`h-8 px-2 flex items-center justify-center bg-neutral-900 border border-neutral-800 hover:bg-neutral-800 transition-[background-color,color] text-[9px] uppercase tracking-wider ${soundEnabled ? "text-neutral-400 hover:text-neutral-300 cursor-pointer" : "text-neutral-600 cursor-not-allowed"}`}
+                        >
+                          {SOUND_PACKS[soundPack].label}
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Pattern Section */}
+                    <div className="mb-3">
+                      <div className="text-[9px] uppercase tracking-wider text-neutral-500 mb-1.5 px-1">Pattern</div>
+                      <div className="flex flex-wrap gap-1">
+                        {PATTERN_OPTIONS.map((option) => (
+                          <button
+                            key={option.style}
+                            onClick={() => setPatternStyle(option.style)}
+                            aria-label={option.label}
+                            aria-pressed={patternStyle === option.style}
+                            className={`h-8 w-8 flex items-center justify-center transition-[background-color,color,border-color] cursor-pointer ${
+                              patternStyle === option.style
+                                ? "text-white bg-neutral-600 border border-neutral-400"
+                                : "text-neutral-400 bg-neutral-900 border border-neutral-800 hover:bg-neutral-800 hover:text-neutral-300"
+                            }`}
+                          >
+                            {option.icon}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Frame Section */}
+                    <div className="mb-3">
+                      <div className="text-[9px] uppercase tracking-wider text-neutral-500 mb-1.5 px-1">Frame</div>
+                      <div className="flex flex-wrap gap-1">
+                        {frameOptions.map((option) => (
+                          <button
+                            key={option.style}
+                            onClick={() => setFrameStyle(option.style)}
+                            aria-label={option.label}
+                            aria-pressed={frameStyle === option.style}
+                            className={`h-8 w-8 flex items-center justify-center transition-[background-color,color,border-color] cursor-pointer ${
+                              frameStyle === option.style
+                                ? "text-white bg-neutral-600 border border-neutral-400"
+                                : "text-neutral-400 bg-neutral-900 border border-neutral-800 hover:bg-neutral-800 hover:text-neutral-300"
+                            }`}
+                          >
+                            {option.icon}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Theme Section */}
+                    <div>
+                      <div className="text-[9px] uppercase tracking-wider text-neutral-500 mb-1.5 px-1">Theme</div>
+                      <div className="flex flex-wrap gap-1">
+                        {(Object.keys(THEME_COLORS) as Theme[]).map((t) => (
+                          <button
+                            key={t}
+                            onClick={() => { setTheme(t); showToast(`${t.charAt(0).toUpperCase() + t.slice(1)} theme`) }}
+                            aria-label={`${t} theme`}
+                            aria-pressed={theme === t}
+                            className={`h-8 w-8 flex items-center justify-center transition-[background-color,border-color] cursor-pointer ${
+                              theme === t
+                                ? "bg-neutral-600 border border-neutral-400"
+                                : "bg-neutral-900 border border-neutral-800 hover:bg-neutral-800"
+                            }`}
+                          >
+                            <div className={`w-3 h-3 ${THEME_COLORS[t]}`} />
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Desktop: Sound Toggle */}
               <Tooltip>
                 <TooltipTrigger asChild>
                   <button
                     onClick={() => setSoundEnabled(!soundEnabled)}
                     aria-label={soundEnabled ? "Mute sound" : "Unmute sound"}
-                    className="h-8 w-8 sm:h-9 sm:w-9 flex items-center justify-center bg-neutral-950 border border-neutral-800 hover:bg-neutral-900 transition-[background-color,color] text-neutral-400 hover:text-neutral-300 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-neutral-500"
+                    className="hidden sm:flex h-9 w-9 items-center justify-center bg-neutral-950 border border-neutral-800 hover:bg-neutral-900 transition-[background-color,color] text-neutral-400 hover:text-neutral-300 cursor-pointer focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-neutral-500"
                   >
                     {soundEnabled ? (
                       <Volume2 className="w-4 h-4" strokeWidth={1.5} />
@@ -495,14 +630,14 @@ export default function SignatureApp() {
                 </TooltipContent>
               </Tooltip>
 
-              {/* Sound Pack */}
+              {/* Desktop: Sound Pack */}
               <Tooltip>
                 <TooltipTrigger asChild>
                   <button
                     onClick={cycleSoundPack}
                     disabled={!soundEnabled}
                     aria-label="Change sound pack"
-                    className={`h-8 sm:h-9 px-2 sm:px-3 flex items-center justify-center bg-neutral-950 border border-neutral-800 hover:bg-neutral-900 transition-[background-color,color] text-[9px] sm:text-[10px] uppercase tracking-wider font-light focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-neutral-500 ${soundEnabled ? "text-neutral-400 hover:text-neutral-300" : "text-neutral-600 cursor-not-allowed"}`}
+                    className={`hidden sm:flex h-9 px-3 items-center justify-center bg-neutral-950 border border-neutral-800 hover:bg-neutral-900 transition-[background-color,color] text-[10px] uppercase tracking-wider font-light focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-neutral-500 ${soundEnabled ? "text-neutral-400 hover:text-neutral-300 cursor-pointer" : "text-neutral-600 cursor-not-allowed"}`}
                   >
                     {SOUND_PACKS[soundPack].label}
                   </button>
@@ -511,10 +646,10 @@ export default function SignatureApp() {
                   SOUND PACK
                 </TooltipContent>
               </Tooltip>
-              
-              <div className="w-1 sm:w-3" />
 
-              {/* Pattern Style Options */}
+              <div className="hidden sm:block w-3" />
+
+              {/* Desktop: Pattern Style Options */}
               {PATTERN_OPTIONS.map((option) => (
                 <Tooltip key={option.style}>
                   <TooltipTrigger asChild>
@@ -522,10 +657,10 @@ export default function SignatureApp() {
                       onClick={() => setPatternStyle(option.style)}
                       aria-label={option.label}
                       aria-pressed={patternStyle === option.style}
-                      className={`h-8 w-8 sm:h-9 sm:w-9 flex items-center justify-center bg-neutral-950 border border-neutral-800 transition-[background-color,color] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-neutral-500 ${
+                      className={`hidden sm:flex h-9 w-9 items-center justify-center transition-[background-color,color,border-color] cursor-pointer focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-neutral-500 ${
                         patternStyle === option.style
-                          ? "text-neutral-200 bg-neutral-800"
-                          : "text-neutral-400 hover:bg-neutral-900 hover:text-neutral-300"
+                          ? "text-white bg-neutral-700 border border-neutral-500"
+                          : "text-neutral-400 bg-neutral-950 border border-neutral-800 hover:bg-neutral-900 hover:text-neutral-300"
                       }`}
                     >
                       {option.icon}
@@ -537,9 +672,9 @@ export default function SignatureApp() {
                 </Tooltip>
               ))}
 
-              <div className="w-1 sm:w-3" />
+              <div className="hidden sm:block w-3" />
 
-              {/* Frame Style Options */}
+              {/* Desktop: Frame Style Options */}
               {frameOptions.map((option) => (
                 <Tooltip key={option.style}>
                   <TooltipTrigger asChild>
@@ -547,10 +682,10 @@ export default function SignatureApp() {
                       onClick={() => setFrameStyle(option.style)}
                       aria-label={option.label}
                       aria-pressed={frameStyle === option.style}
-                      className={`h-8 w-8 sm:h-9 sm:w-9 flex items-center justify-center bg-neutral-950 border border-neutral-800 transition-[background-color,color] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-neutral-500 ${
+                      className={`hidden sm:flex h-9 w-9 items-center justify-center transition-[background-color,color,border-color] cursor-pointer focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-neutral-500 ${
                         frameStyle === option.style
-                          ? "text-neutral-200 bg-neutral-800"
-                          : "text-neutral-400 hover:bg-neutral-900 hover:text-neutral-300"
+                          ? "text-white bg-neutral-700 border border-neutral-500"
+                          : "text-neutral-400 bg-neutral-950 border border-neutral-800 hover:bg-neutral-900 hover:text-neutral-300"
                       }`}
                     >
                       {option.icon}
@@ -561,16 +696,16 @@ export default function SignatureApp() {
                   </TooltipContent>
                 </Tooltip>
               ))}
-              
-              <div className="w-1 sm:w-3" />
-              
-              {/* Theme Selector */}
+
+              <div className="hidden sm:block w-3" />
+
+              {/* Desktop: Theme Selector */}
               <Tooltip>
                 <TooltipTrigger asChild>
                   <button
                     onClick={cycleTheme}
                     aria-label={`Change theme, current: ${theme}`}
-                    className="h-8 w-8 sm:h-9 sm:w-9 flex items-center justify-center bg-neutral-950 border border-neutral-800 hover:bg-neutral-900 transition-[background-color] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-neutral-500"
+                    className="hidden sm:flex h-9 w-9 items-center justify-center bg-neutral-950 border border-neutral-800 hover:bg-neutral-900 transition-[background-color] cursor-pointer focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-neutral-500"
                   >
                     <div aria-hidden="true" className={`w-3 h-3 ${THEME_COLORS[theme]} transition-[background-color]`} />
                   </button>
@@ -579,9 +714,9 @@ export default function SignatureApp() {
                   {theme.toUpperCase()}
                 </TooltipContent>
               </Tooltip>
-              
-              <div className="w-1 sm:w-3" />
-              
+
+              <div className="hidden sm:block w-3" />
+
               {/* Export Dropdown */}
               <div className="relative" ref={exportMenuRef}>
                 <Tooltip>
@@ -592,7 +727,7 @@ export default function SignatureApp() {
                       aria-label="Export signature"
                       aria-expanded={showExportMenu}
                       aria-haspopup="menu"
-                      className="h-8 w-8 sm:h-9 sm:w-9 flex items-center justify-center bg-neutral-950 border border-neutral-800 hover:bg-neutral-900 transition-[background-color,color] text-neutral-400 hover:text-neutral-300 disabled:opacity-40 disabled:hover:bg-neutral-950 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-neutral-500"
+                      className="h-8 w-8 sm:h-9 sm:w-9 flex items-center justify-center bg-neutral-950 border border-neutral-800 hover:bg-neutral-900 transition-[background-color,color] text-neutral-400 hover:text-neutral-300 cursor-pointer disabled:opacity-40 disabled:hover:bg-neutral-950 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-neutral-500"
                     >
                       <Download className="w-4 h-4" strokeWidth={1.5} />
                     </button>
@@ -607,7 +742,7 @@ export default function SignatureApp() {
                     <button
                       role="menuitem"
                       onClick={() => { downloadJPG(); setShowExportMenu(false) }}
-                      className="w-full h-8 px-3 flex items-center gap-2 text-[10px] uppercase tracking-wider font-light text-neutral-400 hover:bg-neutral-900 hover:text-neutral-200 transition-[background-color,color] focus-visible:outline-none focus-visible:bg-neutral-900 focus-visible:text-neutral-200"
+                      className="w-full h-8 px-3 flex items-center gap-2 text-[10px] uppercase tracking-wider font-light text-neutral-400 hover:bg-neutral-900 hover:text-neutral-200 transition-[background-color,color] cursor-pointer focus-visible:outline-none focus-visible:bg-neutral-900 focus-visible:text-neutral-200"
                     >
                       <Download aria-hidden="true" className="w-3 h-3" strokeWidth={1.5} />
                       JPG
@@ -615,7 +750,7 @@ export default function SignatureApp() {
                     <button
                       role="menuitem"
                       onClick={() => { downloadSVG(); setShowExportMenu(false) }}
-                      className="w-full h-8 px-3 flex items-center gap-2 text-[10px] uppercase tracking-wider font-light text-neutral-400 hover:bg-neutral-900 hover:text-neutral-200 transition-[background-color,color] focus-visible:outline-none focus-visible:bg-neutral-900 focus-visible:text-neutral-200"
+                      className="w-full h-8 px-3 flex items-center gap-2 text-[10px] uppercase tracking-wider font-light text-neutral-400 hover:bg-neutral-900 hover:text-neutral-200 transition-[background-color,color] cursor-pointer focus-visible:outline-none focus-visible:bg-neutral-900 focus-visible:text-neutral-200"
                     >
                       <FileCode aria-hidden="true" className="w-3 h-3" strokeWidth={1.5} />
                       SVG
@@ -631,7 +766,7 @@ export default function SignatureApp() {
                     onClick={copyToClipboard}
                     disabled={!name.trim()}
                     aria-label={copyFeedback ? "Copied to clipboard" : "Copy to clipboard"}
-                    className="h-8 w-8 sm:h-9 sm:w-9 flex items-center justify-center bg-neutral-950 border border-neutral-800 hover:bg-neutral-900 transition-[background-color,color] text-neutral-400 hover:text-neutral-300 disabled:opacity-40 disabled:hover:bg-neutral-950 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-neutral-500"
+                    className="h-8 w-8 sm:h-9 sm:w-9 flex items-center justify-center bg-neutral-950 border border-neutral-800 hover:bg-neutral-900 transition-[background-color,color] text-neutral-400 hover:text-neutral-300 cursor-pointer disabled:opacity-40 disabled:hover:bg-neutral-950 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-neutral-500"
                   >
                     <span className="relative w-4 h-4">
                       <Copy
@@ -651,9 +786,7 @@ export default function SignatureApp() {
                   {copyFeedback ? "COPIED" : "COPY"}
                 </TooltipContent>
               </Tooltip>
-              
-              <div className="w-1 sm:w-3" />
-              
+
               {/* Reset */}
               <Tooltip>
                 <TooltipTrigger asChild>
@@ -661,7 +794,7 @@ export default function SignatureApp() {
                     onClick={clearSignature}
                     disabled={!name}
                     aria-label="Reset signature"
-                    className="h-8 w-8 sm:h-9 sm:w-9 flex items-center justify-center bg-neutral-950 border border-neutral-800 hover:bg-neutral-900 transition-[background-color,color] text-neutral-400 hover:text-neutral-300 disabled:opacity-40 disabled:hover:bg-neutral-950 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-neutral-500"
+                    className="h-8 w-8 sm:h-9 sm:w-9 flex items-center justify-center bg-neutral-950 border border-neutral-800 hover:bg-neutral-900 transition-[background-color,color] text-neutral-400 hover:text-neutral-300 cursor-pointer disabled:opacity-40 disabled:hover:bg-neutral-950 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-neutral-500"
                   >
                     <RotateCcw aria-hidden="true" className="w-4 h-4" strokeWidth={1.5} />
                   </button>
@@ -679,13 +812,142 @@ export default function SignatureApp() {
 
         {/* Credit */}
         <a
-          href="https://laks.sh"
+          href="https://x.com/blakssh"
           target="_blank"
           rel="noopener noreferrer"
           className="fixed top-3 right-4 text-[9px] uppercase tracking-[0.2em] text-neutral-500 hover:text-neutral-300 transition-[color] focus-visible:outline-none focus-visible:text-neutral-300 focus-visible:ring-1 focus-visible:ring-neutral-500"
         >
-          laks.sh
+          blakssh
         </a>
+
+        {/* Info Button */}
+        <button
+          onClick={() => setShowInfoModal(true)}
+          aria-label="How it works"
+          className="fixed top-3 left-4 p-1.5 text-neutral-500 hover:text-neutral-300 transition-[color] cursor-pointer focus-visible:outline-none focus-visible:text-neutral-300 focus-visible:ring-1 focus-visible:ring-neutral-500"
+        >
+          <Info className="w-4 h-4" strokeWidth={1.5} />
+        </button>
+
+        {/* Info Modal */}
+        <AnimatePresence>
+          {showInfoModal && (
+            <motion.div
+              className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowInfoModal(false)}
+            >
+              <motion.div
+                className="relative w-full max-w-lg max-h-[80vh] overflow-y-auto bg-neutral-950 border border-neutral-800 p-6"
+                initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.95, y: 20 }}
+                transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                onClick={(e) => e.stopPropagation()}
+              >
+                <button
+                  onClick={() => setShowInfoModal(false)}
+                  aria-label="Close"
+                  className="absolute top-4 right-4 p-1 text-neutral-500 hover:text-neutral-300 transition-[color] cursor-pointer"
+                >
+                  <X className="w-4 h-4" strokeWidth={1.5} />
+                </button>
+
+                <h2 className="text-sm uppercase tracking-[0.3em] text-neutral-200 mb-6">How It Works</h2>
+
+                {/* Pattern Algorithms */}
+                <div className="space-y-4 mb-6">
+                  <h3 className="text-[10px] uppercase tracking-[0.2em] text-neutral-400 border-b border-neutral-800 pb-2">Pattern Algorithms</h3>
+
+                  <div className="space-y-3 text-[11px] text-neutral-400 leading-relaxed">
+                    <div>
+                      <div className="flex items-center gap-2 text-neutral-200 font-medium">
+                        <span className="text-neutral-300"><ClassicIcon /></span>
+                        Classic
+                      </div>
+                      <p className="mt-1">Places letters in a circular arrangement based on their position in the alphabet. Vowels orbit closer to the center. Letters are connected sequentially with cross-connections for visual depth.</p>
+                    </div>
+
+                    <div>
+                      <div className="flex items-center gap-2 text-neutral-200 font-medium">
+                        <span className="text-neutral-300"><OrbitalIcon /></span>
+                        Orbital
+                      </div>
+                      <p className="mt-1">Distributes letters across three elliptical orbits. Vowels occupy the innermost ring, consonants alternate between middle and outer rings. Uses Delaunay triangulation for natural-looking connections.</p>
+                    </div>
+
+                    <div>
+                      <div className="flex items-center gap-2 text-neutral-200 font-medium">
+                        <span className="text-neutral-300"><SpiralIcon /></span>
+                        Spiral
+                      </div>
+                      <p className="mt-1">Arranges letters along a golden ratio spiral (φ ≈ 1.618). Each letter is placed at the golden angle (≈137.5°) from the previous, creating an aesthetically pleasing distribution found in nature.</p>
+                    </div>
+
+                    <div>
+                      <div className="flex items-center gap-2 text-neutral-200 font-medium">
+                        <span className="text-neutral-300"><GeometricIcon /></span>
+                        Geometric
+                      </div>
+                      <p className="mt-1">Creates sacred geometry patterns. Letters form regular polygons (pentagon, hexagon, etc.) with inner structures. Includes star connections when there are 5+ outer points.</p>
+                    </div>
+
+                    <div>
+                      <div className="flex items-center gap-2 text-neutral-200 font-medium">
+                        <span className="text-neutral-300"><WaveIcon /></span>
+                        Wave
+                      </div>
+                      <p className="mt-1">Positions letters along sinusoidal waves. Multiple frequencies are combined based on character codes, creating unique wave patterns for each name.</p>
+                    </div>
+
+                    <div>
+                      <div className="flex items-center gap-2 text-neutral-200 font-medium">
+                        <span className="text-neutral-300"><ScatterIcon /></span>
+                        Scatter
+                      </div>
+                      <p className="mt-1">Uses force-directed placement with physics simulation. Points repel each other while being attracted to the center, then connects using Delaunay triangulation for organic results.</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Special Effects */}
+                <div className="space-y-4 mb-6">
+                  <h3 className="text-[10px] uppercase tracking-[0.2em] text-neutral-400 border-b border-neutral-800 pb-2">Special Effects</h3>
+
+                  <div className="space-y-3 text-[11px] text-neutral-400 leading-relaxed">
+                    <div>
+                      <span className="text-neutral-200 font-medium">Letter Frequency</span>
+                      <p className="mt-1">Repeated letters create brighter, thicker connections. Type &quot;ANNA&quot; or &quot;MISSISSIPPI&quot; to see letters like A, S, I glow more intensely as their frequency increases.</p>
+                    </div>
+
+                    <div>
+                      <span className="text-neutral-200 font-medium">Vowel Highlighting</span>
+                      <p className="mt-1">Vowels (A, E, I, O, U) are rendered slightly larger and positioned differently, creating visual hierarchy within the constellation.</p>
+                    </div>
+
+                    <div>
+                      <span className="text-neutral-200 font-medium">Interactive Hover</span>
+                      <p className="mt-1">Hover over any point to reveal its letter and highlight connected lines. On mobile, tap and hold to see the same effect.</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Tips */}
+                <div className="space-y-4">
+                  <h3 className="text-[10px] uppercase tracking-[0.2em] text-neutral-400 border-b border-neutral-800 pb-2">Tips</h3>
+
+                  <div className="space-y-2 text-[11px] text-neutral-400 leading-relaxed">
+                    <p>• Click anywhere on the canvas to add a date stamp</p>
+                    <p>• Each name generates a unique, deterministic pattern</p>
+                    <p>• Export as SVG for infinite scalability</p>
+                  </div>
+                </div>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </main>
     </TooltipProvider>
   )

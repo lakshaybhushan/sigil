@@ -645,6 +645,7 @@ interface Point {
   twinkleSpeed: number
   normalizedX: number
   normalizedY: number
+  frequency: number // How many times this letter appears in the name
 }
 
 interface Line {
@@ -1134,9 +1135,9 @@ export const SignatureCanvas = forwardRef<SignatureCanvasRef, SignatureCanvasPro
         const bottomRight = { x: centerX + triangleSize / 2, y: centerY + triangleHeight * 0.4 }
 
         const points: Point[] = [
-          { x: topPoint.x, y: topPoint.y, char: "V", birthTime: now, isVowel: false, index: 0, twinkleOffset: 0, twinkleSpeed: 0.003, normalizedX: topPoint.x / width, normalizedY: topPoint.y / height },
-          { x: bottomLeft.x, y: bottomLeft.y, char: "E", birthTime: now + 80, isVowel: true, index: 1, twinkleOffset: 2, twinkleSpeed: 0.003, normalizedX: bottomLeft.x / width, normalizedY: bottomLeft.y / height },
-          { x: bottomRight.x, y: bottomRight.y, char: "L", birthTime: now + 160, isVowel: false, index: 2, twinkleOffset: 4, twinkleSpeed: 0.003, normalizedX: bottomRight.x / width, normalizedY: bottomRight.y / height },
+          { x: topPoint.x, y: topPoint.y, char: "V", birthTime: now, isVowel: false, index: 0, twinkleOffset: 0, twinkleSpeed: 0.003, normalizedX: topPoint.x / width, normalizedY: topPoint.y / height, frequency: 1 },
+          { x: bottomLeft.x, y: bottomLeft.y, char: "E", birthTime: now + 80, isVowel: true, index: 1, twinkleOffset: 2, twinkleSpeed: 0.003, normalizedX: bottomLeft.x / width, normalizedY: bottomLeft.y / height, frequency: 2 },
+          { x: bottomRight.x, y: bottomRight.y, char: "L", birthTime: now + 160, isVowel: false, index: 2, twinkleOffset: 4, twinkleSpeed: 0.003, normalizedX: bottomRight.x / width, normalizedY: bottomRight.y / height, frequency: 1 },
         ]
 
         const lines: Line[] = [
@@ -1156,6 +1157,12 @@ export const SignatureCanvas = forwardRef<SignatureCanvasRef, SignatureCanvasPro
         pointsRef.current = []
         linesRef.current = []
         return
+      }
+
+      // Calculate letter frequency
+      const letterFrequency = new Map<string, number>()
+      for (const char of chars) {
+        letterFrequency.set(char, (letterFrequency.get(char) || 0) + 1)
       }
 
       // Generate seed from name
@@ -1203,6 +1210,7 @@ export const SignatureCanvas = forwardRef<SignatureCanvasRef, SignatureCanvasPro
         twinkleSpeed: 0.002 + Math.random() * 0.002,
         normalizedX: p.x / width,
         normalizedY: p.y / height,
+        frequency: letterFrequency.get(p.char) || 1,
       }))
 
       // Convert edges to Lines with animation data
@@ -1320,14 +1328,23 @@ export const SignatureCanvas = forwardRef<SignatureCanvasRef, SignatureCanvasPro
         const currentY = from.y + (to.y - from.y) * ease
 
         const revealBoost = revealEase * 0.4
-        const finalOpacity = Math.min(line.opacity * ease + revealBoost, 1)
-        
+
+        // Frequency boost - lines connected to repeated letters are brighter
+        // Max frequency of connected points, scaled logarithmically
+        const maxFreq = Math.max(from.frequency, to.frequency)
+        const frequencyBoost = maxFreq > 1 ? Math.min((maxFreq - 1) * 0.15, 0.5) : 0
+
+        const finalOpacity = Math.min(line.opacity * ease + revealBoost + frequencyBoost, 1)
+
         // Highlight lines connected to hovered point
         const isHighlighted = hoveredPoint && (from === hoveredPoint || to === hoveredPoint)
         const highlightBoost = isHighlighted ? 0.5 : 0
-        
+
+        // Line thickness also increases with frequency
+        const frequencyThickness = maxFreq > 1 ? Math.min((maxFreq - 1) * 0.3, 1) : 0
+
         ctx.strokeStyle = `rgba(${lr}, ${lg}, ${lb}, ${Math.min(finalOpacity + highlightBoost, 1)})`
-        ctx.lineWidth = 1 + revealEase * 0.5 + (isHighlighted ? 0.5 : 0)
+        ctx.lineWidth = 1 + revealEase * 0.5 + frequencyThickness + (isHighlighted ? 0.5 : 0)
         ctx.beginPath()
         ctx.moveTo(from.x, from.y)
         ctx.lineTo(currentX, currentY)
@@ -1352,10 +1369,15 @@ export const SignatureCanvas = forwardRef<SignatureCanvasRef, SignatureCanvasPro
         
         const isHovered = hoveredPoint === p
         const hoverBoost = isHovered ? 0.4 : 0
-        const brightness = Math.min(ease * twinkle + revealPulse + hoverBoost, 1)
 
+        // Frequency boost - repeated letters glow brighter
+        const freqBrightness = p.frequency > 1 ? Math.min((p.frequency - 1) * 0.1, 0.3) : 0
+        const brightness = Math.min(ease * twinkle + revealPulse + hoverBoost + freqBrightness, 1)
+
+        // Dots for repeated letters are slightly larger
+        const freqSizeBoost = p.frequency > 1 ? 1 + Math.min((p.frequency - 1) * 0.15, 0.5) : 1
         const baseRadius = p.isVowel ? 2.5 : 2
-        const radius = baseRadius * ease * (1 + revealEase * 0.3) * (isHovered ? 1.5 : 1)
+        const radius = baseRadius * ease * (1 + revealEase * 0.3) * freqSizeBoost * (isHovered ? 1.5 : 1)
 
         if (brightness > 0.3) {
           ctx.fillStyle = `rgba(${gr}, ${gg}, ${gb}, ${0.3 * brightness})`
